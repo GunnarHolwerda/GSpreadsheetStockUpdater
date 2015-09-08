@@ -107,6 +107,7 @@ spreadsheet_key = sys.argv[1]
 gc = gspread.authorize(generate_oauth_credentials())
 worksheet = gc.open_by_key(spreadsheet_key).sheet1
 ticker_symbols = get_ticker_symbols(worksheet)
+
 # Get pricing data from Yahoo Finance
 price_data = get_price_data(build_yql_query(ticker_symbols))
 
