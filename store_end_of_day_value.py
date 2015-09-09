@@ -29,8 +29,8 @@ parser.add_argument("spreadsheet_key", help="The spreadsheet key of the Google S
 parser.add_argument("value_col", help="The column in which the spreadsheet value will be copied too", type=int)
 parser.add_argument("date_col", help="The column in which the date of copy will be copied too", type=int)
 parser.add_argument("value_cell", help="Cell of the value to copy (i.e. G6)")
-parser.add_argument("-t", "--portfolio_spreadsheet", help="The spreadsheet title which to copy the current value to")
-parser.add_argument("-v", "--value_spreadsheet", help="The spreadsheet title which to copy the portfolio lives")
+parser.add_argument("-p", "--portfolio_worksheet", help="The spreadsheet title which to copy the current value to")
+parser.add_argument("-v", "--value_worksheet", help="The spreadsheet title which to copy the portfolio lives")
 args = parser.parse_args()
 
 # Authenticate with the Google API using OAuth2

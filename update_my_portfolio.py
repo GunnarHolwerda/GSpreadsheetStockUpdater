@@ -92,9 +92,9 @@ def get_price_data(query_url):
 
 PARSER = OptionParser()
 
-PARSER.add_option("-t", "--ticker-column", action="store", type="int", dest="ticker_column",
+PARSER.add_option("-t", "--ticker_column", action="store", type="int", dest="ticker_column",
                   help="The column number holding the ticker symbols (A = 1 and so on)")
-PARSER.add_option("-p", "--price-update-column", action="store", type="int",
+PARSER.add_option("-p", "--price_update_column", action="store", type="int",
                   dest="price_update_column",
                   help="The column number to update with the prices (A = 1 and so on)")
 (options, args) = PARSER.parse_args()
