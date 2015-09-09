@@ -57,3 +57,14 @@ Example of a value_worksheet:
 ![Example value worksheet](http://i.imgur.com/vDa94LD.png)
 
 In this example the `<value_col>` would be 2, the `<date_col>` would be 1, and the `<value_cell>` would be G11 from the worksheet in the image from update_my_portfolio.py. In my example spreadsheet the portfolio worksheet is the first worksheet, so I don't need to specify its title with the `-p` option.
+
+## Best way to run the scripts
+I highly suggest using [cron](https://en.wikipedia.org/wiki/Cron) to run these scripts on a schedule so that the values can be updated as often as possible.
+
+An example cron might be:
+```
+*/15 07-15 * * 1-5 root /usr/bin/python3 /home/user/portfolio_manager/update_my_portfolio.py <spreadhseet_key>
+15 15 * * 1-5 root /usr/bin/python3 /home/user/portfolio_manager/store_end_of_day_value.py <spreadsheet_key> 2 1 G11
+```
+
+This cron runs the update_my_portfolio.py script every 15 minutes, from 7am to 3pm, Monday - Friday. It then runs store_end_of_day_value.py at 3:15pm, Monday - Friday.
