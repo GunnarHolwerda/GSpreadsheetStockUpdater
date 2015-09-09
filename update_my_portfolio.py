@@ -17,6 +17,7 @@ from urllib.parse import quote_plus
 
 BASE_DIR = dirname(realpath(__file__))
 
+
 def get_ticker_symbols(worksheet):
     """
     Gets the ticker symbols from the column holding them
@@ -44,7 +45,7 @@ def generate_oauth_credentials():
     return SignedJwtAssertionCredentials(json_key['client_email'],
                                          bytes(json_key['private_key'], 'utf-8'),
                                          scope
-                                        )
+                                         )
 
 
 def build_yql_query(tickers):
@@ -55,7 +56,7 @@ def build_yql_query(tickers):
     :return: Encoded URL to be used in a GET request
     """
     yql_base_url = "http://query.yahooapis.com/v1/public/yql"
-    end_yql_url = ("&format=json&diagnostics=true&env=store%3A%2F%2Fdatatables",
+    end_yql_url = ("&format=json&diagnostics=true&env=store%3A%2F%2Fdatatables"
                    ".org%2Falltableswithkeys&callback=")
     yql_query = "select LastTradePriceOnly from yahoo.finance.quotes where symbol in ("
 
@@ -87,6 +88,7 @@ def get_price_data(query_url):
         price_dict[ticker_symbols[index]] = price_info[index]['LastTradePriceOnly']
 
     return price_dict
+
 
 PARSER = OptionParser()
 

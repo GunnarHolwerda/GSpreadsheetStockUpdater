@@ -1,2 +1,3 @@
 # Ignore credentials file from Google Project
 credentials.json
+.idea/
