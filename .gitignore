@@ -1,3 +1,9 @@
 # Ignore credentials file from Google Project
 credentials.json
+
+# Ignore authentication files
+authentication.py
+
+# Ignore unnecessary files
 .idea/
+__pycache__/

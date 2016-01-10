@@ -9,6 +9,7 @@ import requests
 import json
 import gspread
 import time
+from pprint import pprint
 from os.path import dirname, realpath
 from optparse import OptionParser
 from datetime import datetime
@@ -18,7 +19,7 @@ from urllib.parse import quote_plus
 BASE_DIR = dirname(realpath(__file__))
 
 
-def get_ticker_symbols(worksheet):
+def get_ticker_symbols(ws):
     """
     Gets the ticker symbols from the column holding them
     :param ws: The worksheet object to get the values from
@@ -26,9 +27,13 @@ def get_ticker_symbols(worksheet):
     :return: a list of the ticker symbols from the column
     :rtype : list
     """
-    tickers = list(set(worksheet.col_values(ticker_column)))
+    tickers = list(set(ws.col_values(ticker_column)))
+
     if 'Company' in tickers:
         tickers.remove('Company')
+
+    if '' in tickers:
+        tickers.remove('')
 
     return tickers
 
@@ -58,7 +63,7 @@ def build_yql_query(tickers):
     yql_base_url = "http://query.yahooapis.com/v1/public/yql"
     end_yql_url = ("&format=json&diagnostics=true&env=store%3A%2F%2Fdatatables"
                    ".org%2Falltableswithkeys&callback=")
-    yql_query = "select LastTradePriceOnly from yahoo.finance.quotes where symbol in ("
+    yql_query = "select LastTradePriceOnly, Change from yahoo.finance.quotes where symbol in ("
 
     for ticker in tickers:
         yql_query += "'{0}',".format(ticker)
@@ -84,10 +89,13 @@ def get_price_data(query_url):
     response = json.loads(request.text)
     price_info = response['query']['results']['quote']
     price_dict = {}
+    daily_return_dict = {}
+
     for index in range(0, len(price_info)):
         price_dict[ticker_symbols[index]] = price_info[index]['LastTradePriceOnly']
+        daily_return_dict[ticker_symbols[index]] = price_info[index]['Change']
 
-    return price_dict
+    return price_dict, daily_return_dict
 
 
 PARSER = OptionParser()
@@ -97,10 +105,14 @@ PARSER.add_option("-t", "--ticker_column", action="store", type="int", dest="tic
 PARSER.add_option("-p", "--price_update_column", action="store", type="int",
                   dest="price_update_column",
                   help="The column number to update with the prices (A = 1 and so on)")
+PARSER.add_option("-c", "--change_update_column", action="store", type="int",
+                  dest="change_update_column",
+                  help="The column number to place the current change in stock price")
 (options, args) = PARSER.parse_args()
 
 ticker_column = 3 if not options.ticker_column else options.ticker_column
 price_update_column = 6 if not options.price_update_column else options.price_update_column
+change_update_column = 13 if not options.change_update_column else options.change_update_column
 
 # Get the URL for the spreadsheet to update from command line argument
 spreadsheet_key = sys.argv[1]
@@ -111,13 +123,21 @@ worksheet = gc.open_by_key(spreadsheet_key).sheet1
 ticker_symbols = get_ticker_symbols(worksheet)
 
 # Get pricing data from Yahoo Finance
-price_data = get_price_data(build_yql_query(ticker_symbols))
+price_data, daily_returns = get_price_data(build_yql_query(ticker_symbols))
 
 # Update cells in the Current Price Column with the pricing info from the ticker
 # in the Company column
 for cell_row in range(2, 11):
     stock_price = price_data[worksheet.cell(cell_row, ticker_column).value]
     worksheet.update_cell(cell_row, price_update_column, stock_price)
+
+# Update cells in the Change with the daily change in price info from the ticker
+# in the Company column
+for cell_row in range(2, 11):
+    pprint(daily_returns)
+    change = daily_returns[worksheet.cell(cell_row, ticker_column).value]
+    print(change)
+    worksheet.update_cell(cell_row, change_update_column, change)
 
 # Update the cell next to "Last updated: to the current timestamp
 cell = worksheet.find("Last updated:")
