@@ -13,21 +13,19 @@ These scripts run on Python 3.4 currently and you will need to install the follo
 - requests
 - [gspread](https://github.com/burnash/gspread)
 
-pip is the preferred method to install these: `pip install <package_name>`
+pip is the preferred method to install these: `pip install <package_name>`  
+This may require sudo elevation or administrator elevation depending on your system
 
-## Running the scripts
-### update_my_portfolio.py
-`$ python3 update_my_portfolio.py <spreadsheet_key>`
+## Running the script
+### portfolio_manager.py
+Running the script in this manner will update the current prices only
+`$ python3 portfolio_manager.py <spreadsheet_key> -u 6 -c 13 -t 3`
 
 You can get your `spreadsheet_key` from the URL of your spreadsheet:
 ![Spreadsheet Key Image](http://i.imgur.com/v666kdf.png)
 
 
-Options for the script:
-- `-t` or `--ticker_column`  
-    - This option allows you to specify which column number holds the tickers for the stocks you want to get the prices of (A = 1, B = 2 and so on...)
-- `-p` or `--price_update_column`  
-    - This option allows you to specify which column number to update the price value in (A = 1, B = 2 and so on...)
+To see the help for the script just use the `-h` option when running the script.
 
 Example of a portfolio:
 ![Example portfolio](http://i.imgur.com/axmDcE0.png)
@@ -38,19 +36,9 @@ The script will also attempt to find a cell with the text "Last updated:" and up
 
 
 ### store_end_of_day_value.py
-`$ python3 store_end_of_day_value.py <spreadsheet_key> <value_col> <date_col> <value_cell>`  
+`$ python3 portfolio_manager.py <spreadhseet_key> -s -x 2 -d 1 -z G11`  
 
-See the documentation for the above script on how to obtain your `<spreadsheet_key>`
-
-`<value_col>`  - is the column for which you want to copy the value to  
-`<date_col>`   - is the column to place the date of the copy in  
-`<value_cell>` - is the cell to get the value to copy from
-
-Options for the script:
-- `-p` or `--portfolio_worksheet`  
-    - The title of the worksheet that holds the value to copy from, defaults to the first worksheet in the spreadsheet  
-- `-v` or `--value_worksheet`  
-    - The title of the worksheet to copy the value to, defaults to the second worksheet in the spreadsheet
+The `-s` option initiates the saving function and will copy the value in the cell given to the `-z` option to the last empty sell in the column specified by the `-x` option.
 
 
 Example of a value_worksheet:  
@@ -63,8 +51,8 @@ I highly suggest using [cron](https://en.wikipedia.org/wiki/Cron) to run these s
 
 An example cron might be:
 ```
-*/15 07-15 * * 1-5 root /usr/bin/python3 /home/user/portfolio_manager/update_my_portfolio.py <spreadhseet_key>
-15 15 * * 1-5 root /usr/bin/python3 /home/user/portfolio_manager/store_end_of_day_value.py <spreadsheet_key> 2 1 G11
+*/15 07-15 * * 1-5 root /usr/bin/python3 portfolio_manager.py <spreadsheet_key> -u 6 -c 13 -t 3
+15 15 * * 1-5 root /usr/bin/python3 /home/user/portfolio_manager/portfolio_manager.py <spreadhseet_key> -s -x 2 -d 1 -z G11
 ```
 
 This cron runs the update_my_portfolio.py script every 15 minutes, from 7am to 3pm, Monday - Friday. It then runs store_end_of_day_value.py at 3:15pm, Monday - Friday.
