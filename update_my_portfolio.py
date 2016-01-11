@@ -134,9 +134,7 @@ for cell_row in range(2, 11):
 # Update cells in the Change with the daily change in price info from the ticker
 # in the Company column
 for cell_row in range(2, 11):
-    pprint(daily_returns)
     change = daily_returns[worksheet.cell(cell_row, ticker_column).value]
-    print(change)
     worksheet.update_cell(cell_row, change_update_column, change)
 
 # Update the cell next to "Last updated: to the current timestamp
