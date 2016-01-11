@@ -18,7 +18,7 @@ from urllib.parse import quote_plus
 BASE_DIR = dirname(realpath(__file__))
 
 
-def get_ticker_symbols(worksheet):
+def get_ticker_symbols(worksheet, ticker_column):
     """
     Gets the ticker symbols from the column holding them
     :param ws: The worksheet object to get the values from
@@ -82,7 +82,7 @@ def get_price_data(query_url, ticker_symbols):
     return price_dict, daily_return_dict
 
 
-def store_end_of_day_value(ss, value_cell, value_col, date_col, value_worksheet=1, porfolio_worksheet=0):
+def store_end_of_day_value(ss, value_cell, value_col, date_col, value_worksheet="Portfolio Value over Time", porfolio_worksheet="Current Portfolio Value"):
     # If a spreadsheet title was specified load by title, else default to the
     # second worksheet
     portfolio_worksheet = ss.worksheet(porfolio_worksheet)
@@ -98,7 +98,6 @@ def store_end_of_day_value(ss, value_cell, value_col, date_col, value_worksheet=
 
     # The row to update is the length of the values array + 1
     row_of_cell_to_update = len(values) + 1
-    pprint(row_of_cell_to_update)
     cur_date = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d')
 
     # Update value and date cell
@@ -106,13 +105,10 @@ def store_end_of_day_value(ss, value_cell, value_col, date_col, value_worksheet=
                                 value_col, end_of_day_value)
     value_worksheet.update_cell(row_of_cell_to_update, date_col, cur_date)
 
-def update_portfolio_value(ss, update_column, change_update_column):
+def update_portfolio_value(ss, update_column, change_update_column, ticker_column):
     # Authenticate with the Google API using OAuth2
     worksheet = ss.sheet1
-    ticker_symbols = get_ticker_symbols(worksheet)
-
-    update_column = args.update_column
-    change_update_column = args.change_update_column
+    ticker_symbols = get_ticker_symbols(worksheet, ticker_column)
 
     # Get pricing data from Yahoo Finance
     price_data, daily_returns = get_price_data(build_yql_query(ticker_symbols), ticker_symbols)
@@ -126,9 +122,7 @@ def update_portfolio_value(ss, update_column, change_update_column):
     # Update cells in the Change with the daily change in price info from the ticker
     # in the Company column
     for cell_row in range(2, 11):
-        pprint(daily_returns)
         change = daily_returns[worksheet.cell(cell_row, ticker_column).value]
-        print(change)
         worksheet.update_cell(cell_row, change_update_column, change)
 
     # Update the cell next to "Last updated: to the current timestamp
@@ -136,16 +130,14 @@ def update_portfolio_value(ss, update_column, change_update_column):
     cur_time = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
     worksheet.update_cell(cell.row, cell.col + 1, cur_time)
 
-ticker_column = 3 if not args.ticker_column else args.ticker_column
-price_update_column = 6 if not args.update_column else args.update_column
-change_update_column = 13 if not args.change_update_column else args.change_update_column
-
-
+# ticker_column = 3 if not args.ticker_column else args.ticker_column
+# price_update_column = 6 if not args.update_column else args.update_column
+# change_update_column = 13 if not args.change_update_column else args.change_update_column
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "spreadsheet_key", help="The spreadsheet key of the Google Spreadsheet to update")
-parser.add_argument("-c", "--change_update_column", action="store", type="int",
+parser.add_argument("-c", "--change_update_column", action="store", type=int,
                     help="The column number to place the current change in stock price")
 parser.add_argument("-d",
                     "--date_column", help="The column in which the date of copy will be copied too", type=int)
@@ -172,16 +164,16 @@ spreadsheet_key = args.spreadsheet_key
 gc = gspread.authorize(authentication.generate_oauth_credentials())
 spreadsheet = gc.open_by_key(spreadsheet_key)
 
-if parser.save_value:
+if args.save_value:
     if not args.copy_column or not args.date_column or not args.copy_cell:
         print("The copy_column, date_column, and copy_cell are required options when storing the end of the day value using the -s (--save_value) option.\n")
         exit()
     else:
         #TODO: Figure out how to accomdate if worksheet titles are provided
-        store_end_of_day_value(spreadsheet, args.value_cell, args.value_col, args.date_col)
+        store_end_of_day_value(spreadsheet, args.copy_cell, args.copy_column, args.date_column)
 else:
-    if not args.update_column or not args.change_update_column:
+    if not args.update_column or not args.change_update_column or not args.ticker_column:
         print("The update_column and change_update_column are required options when updating the portfolio value.\n")
         exit()
     else:
-        update_portfolio_value(spreadsheet, args.update_column, args.change_update_column)
+        update_portfolio_value(spreadsheet, args.update_column, args.change_update_column, args.ticker_column)
