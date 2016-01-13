@@ -22,7 +22,15 @@ EMAIL_FROM_ADDRESS = "gunnarholwerda@gmail.com"
 
 
 def email_end_of_day_report(to_address, from_address, prev_total, cur_total):
-    msg = "LOOK AT ME"
+    prev_total = prev_total[1:]
+    prev_total = prev_total.replace(',', '')
+    cur_total = cur_total[1:]
+    cur_total = cur_total.replace(',', '')
+    daily_change = (float(cur_total)-float(prev_total))/float(prev_total)
+    msg = """Daily Stock Report
+    Yesterday's ending value: ${0}
+    Todays's ending value: ${1}
+    Overall increase/decrease: {2}""".format(prev_total, cur_total, daily_change)
 
     # Send the message via our own SMTP server
     s = smtplib.SMTP('smtp.gmail.com:587')
@@ -97,6 +105,13 @@ def get_price_data(query_url, ticker_symbols):
     return price_dict, daily_return_dict
 
 
+def get_yesterdays_total(worksheet):
+    cell = worksheet.find("Yesterday's Total:")
+    yesterdays_total = worksheet.cell(cell.row, cell.col + 1)
+
+    return yesterdays_total.value
+
+
 def store_end_of_day_value(ss, value_cell, value_col, date_col, value_worksheet="Portfolio Value over Time", porfolio_worksheet="Current Portfolio Value"):
     # If a spreadsheet title was specified load by title, else default to the
     # second worksheet
@@ -104,9 +119,8 @@ def store_end_of_day_value(ss, value_cell, value_col, date_col, value_worksheet=
     value_worksheet = ss.worksheet(value_worksheet)
 
     # Get the value to copy from the portfolio spreadsheet
-    end_of_day_value = portfolio_worksheet.acell(value_cell).value
-    previous_value_cell = portfolio_worksheet.find(
-        "Yesterday's Total:").col + 1
+    todays_total = portfolio_worksheet.acell(value_cell).value
+    yesterdays_total = get_yesterdays_total(portfolio_worksheet)
 
     # Get all of the values in the values column
     values = value_worksheet.col_values(value_col)
@@ -114,7 +128,7 @@ def store_end_of_day_value(ss, value_cell, value_col, date_col, value_worksheet=
     values = [i for i in values if i != '']
 
     email_end_of_day_report(EMAIL_TO_ADDRESS, EMAIL_FROM_ADDRESS,
-                            previous_value_cell.value, end_of_day_value)
+                            yesterdays_total, todays_total)
 
     # The row to update is the length of the values array + 1
     row_of_cell_to_update = len(values) + 1
@@ -122,7 +136,7 @@ def store_end_of_day_value(ss, value_cell, value_col, date_col, value_worksheet=
 
     # Update value and date cell
     value_worksheet.update_cell(row_of_cell_to_update,
-                                value_col, end_of_day_value)
+                                value_col, todays_total)
     value_worksheet.update_cell(row_of_cell_to_update, date_col, cur_date)
 
 
