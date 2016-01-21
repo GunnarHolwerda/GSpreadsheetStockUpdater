@@ -62,36 +62,32 @@ def construct_time_variables(today):
         6: "Sunday",
     }
     day_of_week = weekdays.get(today.weekday())
-    tomorrow = weekdays.get(today.weekday() + 1)
-    int_month = today.month
     str_month = months.get(today.month)
     day = today.day
     if 4 <= day % 100 <= 20:
         str_day = str(day) + "th"
     else:
         str_day = str(day) + {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
-    year = today.year
 
-    return day_of_week, tomorrow, int_month, str_month, day, year
+    return day_of_week, str_month, str_day
 
 
 def email_end_of_day_report(to_address, from_address, prev_total, cur_total):
-    day_of_week, tomorrow, int_month, str_month, day, year = \
+    day_of_week, str_month, str_day = \
         construct_time_variables(datetime.datetime.today())
     prev_total = prev_total[1:]
     prev_total = prev_total.replace(',', '')
     cur_total = cur_total[1:]
     cur_total = cur_total.replace(',', '')
     daily_change = (float(cur_total) - float(prev_total)) / float(prev_total)
-    msg = ("Subject: Daily Stock Report For {}, {} {} {}\n"
+    msg = ("Subject: Daily Stock Report For {}, {} {}\n"
            "Daily Stock Report\n\n"
            "Yesterday's ending value: ${}\n"
            "Todays's ending value: ${}\n"
            "Overall increase/decrease: {}%\n"
            "Have a great day!").format(day_of_week,
-                                       day,
+                                       str_day,
                                        str_month,
-                                       year,
                                        prev_total,
                                        cur_total,
                                        round(100 * daily_change, 2))
