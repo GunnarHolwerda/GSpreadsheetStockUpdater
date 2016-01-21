@@ -21,16 +21,80 @@ EMAIL_TO_ADDRESS = "gunnarholwerda@gmail.com"
 EMAIL_FROM_ADDRESS = "gunnarholwerda@gmail.com"
 
 
+def construct_time_variables(today):
+    """
+    Method stolen from Joshwa Moellenkamp
+
+    Using a provided datetime.datetime object representing the
+    current date, construct an assortment of values used by this script.
+    Keyword arguments:
+    today - A datetime.datetime representing the current object.
+    return - (day_of_week, # Sunday, Monday, etc.
+              tomorrow,    # Monday, Tuesday, etc.
+              int_month,   # 1, 2, ..., 12
+              str_month,   # January, February, etc.
+              day,         # Day of the month
+              year)        # Year
+    """
+
+    months = {
+        1: "January",
+        2: "February",
+        3: "March",
+        4: "April",
+        5: "May",
+        6: "June",
+        7: "July",
+        8: "August",
+        9: "September",
+        10: "October",
+        11: "November",
+        12: "December",
+    }
+
+    weekdays = {
+        0: "Monday",
+        1: "Tuesday",
+        2: "Wednesday",
+        3: "Thursday",
+        4: "Friday",
+        5: "Saturday",
+        6: "Sunday",
+    }
+    day_of_week = weekdays.get(today.weekday())
+    tomorrow = weekdays.get(today.weekday() + 1)
+    int_month = today.month
+    str_month = months.get(today.month)
+    day = today.day
+    if 4 <= day % 100 <= 20:
+        str_day = str(day) + "th"
+    else:
+        str_day = str(day) + {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
+    year = today.year
+
+    return day_of_week, tomorrow, int_month, str_month, day, year
+
+
 def email_end_of_day_report(to_address, from_address, prev_total, cur_total):
+    day_of_week, tomorrow, int_month, str_month, day, year = \
+        construct_time_variables(datetime.datetime.today())
     prev_total = prev_total[1:]
     prev_total = prev_total.replace(',', '')
     cur_total = cur_total[1:]
     cur_total = cur_total.replace(',', '')
-    daily_change = (float(cur_total)-float(prev_total))/float(prev_total)
-    msg = """Daily Stock Report
-    Yesterday's ending value: ${0}
-    Todays's ending value: ${1}
-    Overall increase/decrease: {2}""".format(prev_total, cur_total, daily_change)
+    daily_change = (float(cur_total) - float(prev_total)) / float(prev_total)
+    msg = ("Subject: Daily Stock Report For {}, {} {} {}\n"
+           "Daily Stock Report\n\n"
+           "Yesterday's ending value: ${}\n"
+           "Todays's ending value: ${}\n"
+           "Overall increase/decrease: {}%\n"
+           "Have a great day!").format(day_of_week,
+                                       day,
+                                       str_month,
+                                       year,
+                                       prev_total,
+                                       cur_total,
+                                       round(100 * daily_change, 2))
 
     # Send the message via our own SMTP server
     s = smtplib.SMTP('smtp.gmail.com:587')
@@ -207,12 +271,16 @@ if args.save_value:
         exit()
     else:
         # TODO: Figure out how to accomdate if worksheet titles are provided
-        store_end_of_day_value(spreadsheet, args.copy_cell,
-                               args.copy_column, args.date_column)
+        store_end_of_day_value(spreadsheet,
+                               args.copy_cell,
+                               args.copy_column,
+                               args.date_column)
 else:
     if not args.update_column or not args.change_update_column or not args.ticker_column:
         print("The update_column and change_update_column are required options when updating the portfolio value.\n")
         exit()
     else:
-        update_portfolio_value(
-            spreadsheet, args.update_column, args.change_update_column, args.ticker_column)
+        update_portfolio_value(spreadsheet,
+                               args.update_column,
+                               args.change_update_column,
+                               args.ticker_column)
