@@ -11,15 +11,26 @@ import json
 import requests
 import smtplib
 import time
+from oauth2client.client import SignedJwtAssertionCredentials
 from os.path import dirname, realpath
 from datetime import datetime
 from urllib.parse import quote_plus
 
 BASE_DIR = dirname(realpath(__file__))
 
-EMAIL_TO_ADDRESS = "gunnarholwerda@gmail.com"
-EMAIL_FROM_ADDRESS = "gunnarholwerda@gmail.com"
+def generate_oauth_credentials():
+    """
+    Returns OAuth2 credentials from credentials.json
+    :rtype : SignedJwtAssertionCredentials
+    :return: OAuth2 Credentials to authenticate with Google API
+    """
+    json_key = json.load(open(BASE_DIR + '/credentials.json'))
+    scope = ['https://spreadsheets.google.com/feeds']
 
+    return SignedJwtAssertionCredentials(json_key['client_email'],
+                                         bytes(json_key['private_key'], 'utf-8'),
+                                         scope
+                                        )
 
 def construct_time_variables(today):
     """
