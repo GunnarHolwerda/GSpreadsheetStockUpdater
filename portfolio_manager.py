@@ -18,6 +18,7 @@ from urllib.parse import quote_plus
 
 BASE_DIR = dirname(realpath(__file__))
 
+
 def generate_oauth_credentials():
     """
     Returns OAuth2 credentials from credentials.json
@@ -28,9 +29,10 @@ def generate_oauth_credentials():
     scope = ['https://spreadsheets.google.com/feeds']
 
     return SignedJwtAssertionCredentials(json_key['client_email'],
-                                         bytes(json_key['private_key'], 'utf-8'),
-                                         scope
-                                        )
+                                         bytes(
+                                             json_key['private_key'], 'utf-8'),
+                                         scope)
+
 
 def construct_time_variables(today):
     """
@@ -198,8 +200,10 @@ def store_end_of_day_value(ss, value_cell, value_col, date_col, value_worksheet=
     # Remove all empty values from the list
     values = [i for i in values if i != '']
 
-    email_end_of_day_report(EMAIL_TO_ADDRESS, EMAIL_FROM_ADDRESS,
-                            yesterdays_total, todays_total)
+    email_end_of_day_report(authentication.to_addr,
+                            authentication.from_addr,
+                            yesterdays_total,
+                            todays_total)
 
     # The row to update is the length of the values array + 1
     row_of_cell_to_update = len(values) + 1
@@ -269,7 +273,7 @@ args = parser.parse_args()
 spreadsheet_key = args.spreadsheet_key
 
 # Authenticate and get spreadsheet object
-gc = gspread.authorize(authentication.generate_oauth_credentials())
+gc = gspread.authorize(generate_oauth_credentials())
 spreadsheet = gc.open_by_key(spreadsheet_key)
 
 if args.save_value:
