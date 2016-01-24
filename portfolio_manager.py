@@ -5,7 +5,7 @@ argument
 """
 
 import argparse
-import authentication
+import config
 import gspread
 import json
 import requests
@@ -87,7 +87,7 @@ def construct_time_variables(today):
 
 def email_end_of_day_report(to_address, from_address, prev_total, cur_total):
     day_of_week, str_month, str_day = \
-        construct_time_variables(datetime.datetime.today())
+        construct_time_variables(datetime.today())
     prev_total = prev_total[1:]
     prev_total = prev_total.replace(',', '')
     cur_total = cur_total[1:]
@@ -99,8 +99,8 @@ def email_end_of_day_report(to_address, from_address, prev_total, cur_total):
            "Todays's ending value: ${}\n"
            "Overall increase/decrease: {}%\n"
            "Have a great day!").format(day_of_week,
-                                       str_day,
                                        str_month,
+                                       str_day,
                                        prev_total,
                                        cur_total,
                                        round(100 * daily_change, 2))
@@ -108,7 +108,7 @@ def email_end_of_day_report(to_address, from_address, prev_total, cur_total):
     # Send the message via our own SMTP server
     s = smtplib.SMTP('smtp.gmail.com:587')
     s.starttls()
-    s.login(authentication.user, authentication.password)
+    s.login(config.user, config.password)
     s.sendmail(from_address, to_address, msg)
     s.quit()
 
@@ -185,23 +185,29 @@ def get_yesterdays_total(worksheet):
     return yesterdays_total.value
 
 
-def store_end_of_day_value(ss, value_cell, value_col, date_col, value_worksheet="Portfolio Value over Time", porfolio_worksheet="Current Portfolio Value"):
+def store_end_of_day_value(ss, value_worksheet="Portfolio Value over Time", porfolio_worksheet="Current Portfolio Value"):
+    """
+    Copies the value of the portfolio at the end of the day and copies it to a
+    second spreadsheet to be stored along side the date.
+    :param ss: the gspread spreadsheet object
+    :type ss: gspread.Spreadsheet
+    """
     # If a spreadsheet title was specified load by title, else default to the
     # second worksheet
     portfolio_worksheet = ss.worksheet(porfolio_worksheet)
     value_worksheet = ss.worksheet(value_worksheet)
 
     # Get the value to copy from the portfolio spreadsheet
-    todays_total = portfolio_worksheet.acell(value_cell).value
+    todays_total = portfolio_worksheet.acell(config.copy_cell).value
     yesterdays_total = get_yesterdays_total(portfolio_worksheet)
 
     # Get all of the values in the values column
-    values = value_worksheet.col_values(value_col)
+    values = value_worksheet.col_values(config.save_column)
     # Remove all empty values from the list
     values = [i for i in values if i != '']
 
-    email_end_of_day_report(authentication.to_addr,
-                            authentication.from_addr,
+    email_end_of_day_report(config.to_addr,
+                            config.from_addr,
                             yesterdays_total,
                             todays_total)
 
@@ -211,14 +217,20 @@ def store_end_of_day_value(ss, value_cell, value_col, date_col, value_worksheet=
 
     # Update value and date cell
     value_worksheet.update_cell(row_of_cell_to_update,
-                                value_col, todays_total)
-    value_worksheet.update_cell(row_of_cell_to_update, date_col, cur_date)
+                                config.save_column, todays_total)
+    value_worksheet.update_cell(row_of_cell_to_update, config.date_column, cur_date)
 
 
-def update_portfolio_value(ss, update_column, change_update_column, ticker_column):
+def update_portfolio_value(ss):
+    """
+    Places the current price for each stock in the config.ticker_column
+    in the config.update_column. Also, stores the daily net_change in the config.change_update_column
+    param ss: the gspread spreadsheet object
+    :type ss: gspread.Spreadsheet
+    """
     # Authenticate with the Google API using OAuth2
     worksheet = ss.sheet1
-    ticker_symbols = get_ticker_symbols(worksheet, ticker_column)
+    ticker_symbols = get_ticker_symbols(worksheet, config.ticker_column)
 
     # Get pricing data from Yahoo Finance
     price_data, daily_returns = get_price_data(
@@ -227,14 +239,14 @@ def update_portfolio_value(ss, update_column, change_update_column, ticker_colum
     # Update cells in the Current Price Column with the pricing info from the ticker
     # in the Company column
     for cell_row in range(2, 11):
-        stock_price = price_data[worksheet.cell(cell_row, ticker_column).value]
-        worksheet.update_cell(cell_row, update_column, stock_price)
+        stock_price = price_data[worksheet.cell(cell_row, config.ticker_column).value]
+        worksheet.update_cell(cell_row, config.price_update_column, stock_price)
 
     # Update cells in the Change with the daily change in price info from the ticker
     # in the Company column
     for cell_row in range(2, 11):
-        change = daily_returns[worksheet.cell(cell_row, ticker_column).value]
-        worksheet.update_cell(cell_row, change_update_column, change)
+        change = daily_returns[worksheet.cell(cell_row, config.ticker_column).value]
+        worksheet.update_cell(cell_row, config.net_change_update_column, change)
 
     # Update the cell next to "Last updated: to the current timestamp
     cell = worksheet.find("Last updated:")
@@ -247,51 +259,23 @@ def update_portfolio_value(ss, update_column, change_update_column, ticker_colum
 # change_update_column = 13 if not args.change_update_column else args.change_update_column
 
 parser = argparse.ArgumentParser()
-parser.add_argument(
-    "spreadsheet_key", help="The spreadsheet key of the Google Spreadsheet to update")
-parser.add_argument("-c", "--change_update_column", action="store", type=int,
-                    help="The column number to place the current change in stock price")
-parser.add_argument("-d",
-                    "--date_column", help="The column in which the date of copy will be copied too", type=int)
 parser.add_argument("-p", "--portfolio_worksheet", action="store",
                     help="The spreadsheet title which to copy the current value to")
 parser.add_argument("-s", "--save_value", action="store_true",
                     help="Copy end of the day value to another location")
-parser.add_argument("-t", "--ticker_column", action="store", type=int,
-                    help="The column number holding the ticker symbols (A = 1 and so on)")
-parser.add_argument("-u", "--update_column", action="store", type=int,
-                    help="The column number to update with the prices (A = 1 and so on)")
 parser.add_argument("-v", "--value_worksheet", action="store", type=int,
                     help="The spreadsheet title which to copy the portfolio lives")
-parser.add_argument("-x", "--copy_column", action="store", type=int,
-                    help="The column in which the spreadsheet value will be copied too")
-parser.add_argument("-z", "--copy_cell", action="store",
-                    help="The cell which to copy to store")
 args = parser.parse_args()
 
 # Get the URL for the spreadsheet to update from command line argument
-spreadsheet_key = args.spreadsheet_key
+spreadsheet_key = config.spreadsheet_key
 
 # Authenticate and get spreadsheet object
 gc = gspread.authorize(generate_oauth_credentials())
 spreadsheet = gc.open_by_key(spreadsheet_key)
 
 if args.save_value:
-    if not args.copy_column or not args.date_column or not args.copy_cell:
-        print("The copy_column, date_column, and copy_cell are required options when storing the end of the day value using the -s (--save_value) option.\n")
-        exit()
-    else:
-        # TODO: Figure out how to accomdate if worksheet titles are provided
-        store_end_of_day_value(spreadsheet,
-                               args.copy_cell,
-                               args.copy_column,
-                               args.date_column)
+    # TODO: Figure out how to accomodate if worksheet titles are provided
+    store_end_of_day_value(spreadsheet)
 else:
-    if not args.update_column or not args.change_update_column or not args.ticker_column:
-        print("The update_column and change_update_column are required options when updating the portfolio value.\n")
-        exit()
-    else:
-        update_portfolio_value(spreadsheet,
-                               args.update_column,
-                               args.change_update_column,
-                               args.ticker_column)
+    update_portfolio_value(spreadsheet)
