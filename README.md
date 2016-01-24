@@ -16,43 +16,43 @@ These scripts run on Python 3.4 currently and you will need to install the follo
 pip is the preferred method to install these: `pip install <package_name>`  
 This may require sudo elevation or administrator elevation depending on your system
 
-## Running the script
-### portfolio_manager.py
-Running the script in this manner will update the current prices only
-`$ python3 portfolio_manager.py <spreadsheet_key> -u 6 -c 13 -t 3`
+## Configuration
+Open config.py and enter in values for all variables.
 
 You can get your `spreadsheet_key` from the URL of your spreadsheet:
 ![Spreadsheet Key Image](http://i.imgur.com/v666kdf.png)
 
-
-To see the help for the script just use the `-h` option when running the script.
-
 Example of a portfolio:
 ![Example portfolio](http://i.imgur.com/axmDcE0.png)
 
-In this example the `ticker_column` would be 3 and the `price_update_column` would be 6
+Example of a value_worksheet:  
+![Example value worksheet](http://i.imgur.com/vDa94LD.png)
+
+For this portfolio my config.py would look like:
+![Example config.py](http://i.imgur.com/GDohDSJ.png)
+
+
+## Running the script
+### portfolio_manager.py
+Running the script in this manner will update the current prices only
+
+`$ python3 portfolio_manager.py`
 
 The script will also attempt to find a cell with the text "Last updated:" and update the cell to the right of it with the current time that the script ran.
 
 
 ### store_end_of_day_value.py
-`$ python3 portfolio_manager.py <spreadhseet_key> -s -x 2 -d 1 -z G11`  
+`$ python3 portfolio_manager.py -s`
 
-The `-s` option initiates the saving function and will copy the value in the cell given to the `-z` option to the last empty sell in the column specified by the `-x` option.
-
-
-Example of a value_worksheet:  
-![Example value worksheet](http://i.imgur.com/vDa94LD.png)
-
-In this example the `<value_col>` would be 2, the `<date_col>` would be 1, and the `<value_cell>` would be G11 from the worksheet in the image from update_my_portfolio.py. In my example spreadsheet the portfolio worksheet is the first worksheet, so I don't need to specify its title with the `-p` option.
+The `-s` option initiates the saving function and will copy the value from the copy_cell specified in config.py
 
 ## Best way to run the scripts
 I highly suggest using [cron](https://en.wikipedia.org/wiki/Cron) to run these scripts on a schedule so that the values can be updated as often as possible.
 
 An example cron might be:
 ```
-*/15 07-15 * * 1-5 root /usr/bin/python3 portfolio_manager.py <spreadsheet_key> -u 6 -c 13 -t 3
-15 15 * * 1-5 root /usr/bin/python3 /home/user/portfolio_manager/portfolio_manager.py <spreadhseet_key> -s -x 2 -d 1 -z G11
+*/15 07-15 * * 1-5 root /usr/bin/python3 /home/pi/Programming/GSpreadsheetStockUpdater/portfolio_manager.py
+15 15 * * 1-5 root /usr/bin/python3 /home/pi/Programming/GSpreadsheetStockUpdater/portfolio_manager.py -s
 ```
 
 This cron runs the update_my_portfolio.py script every 15 minutes, from 7am to 3pm, Monday - Friday. It then runs store_end_of_day_value.py at 3:15pm, Monday - Friday.
