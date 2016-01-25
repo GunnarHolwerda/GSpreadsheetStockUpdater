@@ -239,7 +239,9 @@ def update_portfolio_value(ss):
     # Update cells in the Current Price Column with the pricing info from the ticker
     # in the Company column
     for cell_row in range(2, 11):
-        stock_price = price_data[worksheet.cell(cell_row, config.ticker_column).value]
+        ticker = worksheet.cell(cell_row, config.ticker_column).value
+        print("Updating price of {}".format(ticker))
+        stock_price = price_data[ticker]
         worksheet.update_cell(cell_row, config.price_update_column, stock_price)
 
     # Update cells in the Change with the daily change in price info from the ticker
