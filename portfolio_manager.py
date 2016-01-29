@@ -84,26 +84,33 @@ def construct_time_variables(today):
 
     return day_of_week, str_month, str_day
 
+def remove_dollar_sign_and_commas(cell_value):
+    new_value = cell_value[1:]
+    new_value = new_value.replace(',', '')
 
-def email_end_of_day_report(to_address, from_address, prev_total, cur_total):
+    return new_value
+
+def email_end_of_day_report(to_address, from_address, prev_total, cur_total, custom_value):
     day_of_week, str_month, str_day = \
         construct_time_variables(datetime.today())
-    prev_total = prev_total[1:]
-    prev_total = prev_total.replace(',', '')
-    cur_total = cur_total[1:]
-    cur_total = cur_total.replace(',', '')
-    daily_change = (float(cur_total) - float(prev_total)) / float(prev_total)
+    prev_total_float = remove_dollar_sign_and_commas(prev_total)
+    cur_total_float = remove_dollar_sign_and_commas(cur_total)
+    daily_change = (float(cur_total_float) - float(prev_total_float)) / float(prev_total_float)
+
     msg = ("Subject: Daily Stock Report For {}, {} {}\n"
            "Daily Stock Report\n\n"
-           "Yesterday's ending value: ${}\n"
-           "Todays's ending value: ${}\n"
+           "Yesterday's ending value: {}\n"
+           "Todays's ending value: {}\n\n"
            "Overall increase/decrease: {}%\n"
+           "{}: {}\n\n"
            "Have a great day!").format(day_of_week,
                                        str_month,
                                        str_day,
                                        prev_total,
                                        cur_total,
-                                       round(100 * daily_change, 2))
+                                       round(100 * daily_change, 2),
+                                       config.custom_value_name,
+                                       custom_value)
 
     # Send the message via our own SMTP server
     s = smtplib.SMTP('smtp.gmail.com:587')
@@ -200,6 +207,7 @@ def store_end_of_day_value(ss, value_worksheet="Portfolio Value over Time", porf
     # Get the value to copy from the portfolio spreadsheet
     todays_total = portfolio_worksheet.acell(config.copy_cell).value
     yesterdays_total = get_yesterdays_total(portfolio_worksheet)
+    custom_value = portfolio_worksheet.acell(config.custom_value).value
 
     # Get all of the values in the values column
     values = value_worksheet.col_values(config.save_column)
@@ -209,7 +217,8 @@ def store_end_of_day_value(ss, value_worksheet="Portfolio Value over Time", porf
     email_end_of_day_report(config.to_addr,
                             config.from_addr,
                             yesterdays_total,
-                            todays_total)
+                            todays_total,
+                            custom_value)
 
     # The row to update is the length of the values array + 1
     row_of_cell_to_update = len(values) + 1

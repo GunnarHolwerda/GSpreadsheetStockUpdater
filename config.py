@@ -31,3 +31,9 @@ date_column =
 
 # The cell that holds the value of the portfolio
 copy_cell = ""
+
+# Name of the custom value to be displayed in the report email:
+custom_value_name = ""
+
+# The cell that holds the value of a custom value to be reported
+custom_value = ""
