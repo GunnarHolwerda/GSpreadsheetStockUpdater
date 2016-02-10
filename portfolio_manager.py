@@ -11,6 +11,7 @@ import json
 import requests
 import smtplib
 import time
+from pprint import pprint
 from oauth2client.client import SignedJwtAssertionCredentials
 from os.path import dirname, realpath
 from datetime import datetime
@@ -90,7 +91,26 @@ def remove_dollar_sign_and_commas(cell_value):
 
     return new_value
 
-def email_end_of_day_report(to_address, from_address, prev_total, cur_total, custom_value):
+def get_biggest_movers(ws, ticker_col, change_col):
+    tickers = ws.col_values(ticker_col)
+    tickers = [i for i in tickers if i != ''][1:]
+    changes = ws.col_values(change_col)
+    changes = [i for i in changes if i != ''][1:]
+
+    changes_dict = {}
+    pos = 0
+    for ticker in tickers:
+        changes_dict[ticker] = changes[pos]
+        pos += 1
+
+    ret_str = "Performance by Stock\n"
+    for ticker, change in changes_dict.items():
+        ret_str += "{}: {}\n".format(ticker, change.rjust(6))
+
+    return ret_str
+
+
+def email_end_of_day_report(to_address, from_address, prev_total, cur_total, custom_value, biggest_movers):
     day_of_week, str_month, str_day = \
         construct_time_variables(datetime.today())
     prev_total_float = remove_dollar_sign_and_commas(prev_total)
@@ -103,6 +123,7 @@ def email_end_of_day_report(to_address, from_address, prev_total, cur_total, cus
            "Todays's ending value: {}\n\n"
            "Overall increase/decrease: {}%\n"
            "{}: {}\n\n"
+           "{}"
            "Have a great day!").format(day_of_week,
                                        str_month,
                                        str_day,
@@ -110,8 +131,8 @@ def email_end_of_day_report(to_address, from_address, prev_total, cur_total, cus
                                        cur_total,
                                        round(100 * daily_change, 2),
                                        config.custom_value_name,
-                                       custom_value)
-
+                                       custom_value,
+                                       biggest_movers)
     # Send the message via our own SMTP server
     s = smtplib.SMTP('smtp.gmail.com:587')
     s.starttls()
@@ -214,11 +235,13 @@ def store_end_of_day_value(ss, value_worksheet="Portfolio Value over Time", porf
     # Remove all empty values from the list
     values = [i for i in values if i != '']
 
+    biggest_movers = get_biggest_movers(portfolio_worksheet, 11, 14)
+
     email_end_of_day_report(config.to_addr,
                             config.from_addr,
                             yesterdays_total,
                             todays_total,
-                            custom_value)
+                            custom_value,biggest_movers)
 
     # The row to update is the length of the values array + 1
     row_of_cell_to_update = len(values) + 1
