@@ -11,6 +11,7 @@ import json
 import requests
 import smtplib
 import time
+from utility_functions import construct_time_variables, remove_dollar_sign_and_commas
 from pprint import pprint
 from oauth2client.client import SignedJwtAssertionCredentials
 from os.path import dirname, realpath
@@ -35,61 +36,11 @@ def generate_oauth_credentials():
                                          scope)
 
 
-def construct_time_variables(today):
-    """
-    Method stolen from Joshwa Moellenkamp
+def get_cell_range(worksheet, start_col, end_col, start_row, end_row):
+    alphanum_range = "" + str(chr(start_col + 96)) + str(start_row) + \
+        ":" + str(chr(end_col + 96)) + str(end_row)
+    return worksheet.range(alphanum_range)
 
-    Using a provided datetime.datetime object representing the
-    current date, construct an assortment of values used by this script.
-    Keyword arguments:
-    today - A datetime.datetime representing the current object.
-    return - (day_of_week, # Sunday, Monday, etc.
-              tomorrow,    # Monday, Tuesday, etc.
-              int_month,   # 1, 2, ..., 12
-              str_month,   # January, February, etc.
-              day,         # Day of the month
-              year)        # Year
-    """
-
-    months = {
-        1: "January",
-        2: "February",
-        3: "March",
-        4: "April",
-        5: "May",
-        6: "June",
-        7: "July",
-        8: "August",
-        9: "September",
-        10: "October",
-        11: "November",
-        12: "December",
-    }
-
-    weekdays = {
-        0: "Monday",
-        1: "Tuesday",
-        2: "Wednesday",
-        3: "Thursday",
-        4: "Friday",
-        5: "Saturday",
-        6: "Sunday",
-    }
-    day_of_week = weekdays.get(today.weekday())
-    str_month = months.get(today.month)
-    day = today.day
-    if 4 <= day % 100 <= 20:
-        str_day = str(day) + "th"
-    else:
-        str_day = str(day) + {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
-
-    return day_of_week, str_month, str_day
-
-def remove_dollar_sign_and_commas(cell_value):
-    new_value = cell_value[1:]
-    new_value = new_value.replace(',', '')
-
-    return new_value
 
 def get_biggest_movers(ws, ticker_col, change_col):
     tickers = ws.col_values(ticker_col)
@@ -115,7 +66,8 @@ def email_end_of_day_report(to_address, from_address, prev_total, cur_total, cus
         construct_time_variables(datetime.today())
     prev_total_float = remove_dollar_sign_and_commas(prev_total)
     cur_total_float = remove_dollar_sign_and_commas(cur_total)
-    daily_change = (float(cur_total_float) - float(prev_total_float)) / float(prev_total_float)
+    daily_change = (float(cur_total_float) -
+                    float(prev_total_float)) / float(prev_total_float)
 
     msg = ("Subject: Daily Stock Report For {}, {} {}\n"
            "Daily Stock Report\n\n"
@@ -141,7 +93,7 @@ def email_end_of_day_report(to_address, from_address, prev_total, cur_total, cus
     s.quit()
 
 
-def get_ticker_symbols(worksheet, ticker_column):
+def get_ticker_cells(worksheet):
     """
     Gets the ticker symbols from the column holding them
     :param ws: The worksheet object to get the values from
@@ -149,15 +101,15 @@ def get_ticker_symbols(worksheet, ticker_column):
     :return: a list of the ticker symbols from the column
     :rtype : list
     """
-    tickers = list(set(worksheet.col_values(ticker_column)))
-
-    if 'Company' in tickers:
-        tickers.remove('Company')
-
-    if '' in tickers:
-        tickers.remove('')
-
+    tickers = worksheet.range(config.ticker_range)
     return tickers
+
+def get_ticker_symbols(ticker_cells):
+    symbols = []
+    for cell in ticker_cells:
+        symbols.append(cell.value)
+
+    return symbols
 
 
 def build_yql_query(tickers):
@@ -197,10 +149,10 @@ def get_price_data(query_url, ticker_symbols):
     price_info = response['query']['results']['quote']
     price_dict = {}
     daily_return_dict = {}
+    pprint(price_info)
 
     for index in range(0, len(price_info)):
-        price_dict[ticker_symbols[index]] = price_info[
-            index]['LastTradePriceOnly']
+        price_dict[ticker_symbols[index]] = price_info[index]['LastTradePriceOnly']
         daily_return_dict[ticker_symbols[index]] = price_info[index]['Change']
 
     return price_dict, daily_return_dict
@@ -241,7 +193,7 @@ def store_end_of_day_value(ss, value_worksheet="Portfolio Value over Time", porf
                             config.from_addr,
                             yesterdays_total,
                             todays_total,
-                            custom_value,biggest_movers)
+                            custom_value, biggest_movers)
 
     # The row to update is the length of the values array + 1
     row_of_cell_to_update = len(values) + 1
@@ -250,7 +202,8 @@ def store_end_of_day_value(ss, value_worksheet="Portfolio Value over Time", porf
     # Update value and date cell
     value_worksheet.update_cell(row_of_cell_to_update,
                                 config.save_column, todays_total)
-    value_worksheet.update_cell(row_of_cell_to_update, config.date_column, cur_date)
+    value_worksheet.update_cell(
+        row_of_cell_to_update, config.date_column, cur_date)
 
 
 def update_portfolio_value(ss):
@@ -261,25 +214,35 @@ def update_portfolio_value(ss):
     :type ss: gspread.Spreadsheet
     """
     # Authenticate with the Google API using OAuth2
+    cells = []
     worksheet = ss.sheet1
-    ticker_symbols = get_ticker_symbols(worksheet, config.ticker_column)
+    ticker_cells = get_ticker_cells(worksheet)
+    ticker_symbols = list(set(get_ticker_symbols(ticker_cells)))
 
     # Get pricing data from Yahoo Finance
     price_data, daily_returns = get_price_data(
         build_yql_query(ticker_symbols), ticker_symbols)
 
+    cur_price_cells = get_cell_range(
+        worksheet, config.price_update_column, config.price_update_column, 2, 10)
+
     # Update cells in the Current Price Column with the pricing info from the ticker
     # in the Company column
-    for cell_row in range(2, 11):
-        ticker = worksheet.cell(cell_row, config.ticker_column).value
+    for i in range(0, len(ticker_cells)):
+
+        ticker = ticker_cells[i].value
         print("Updating price of {}".format(ticker))
         stock_price = price_data[ticker]
-        worksheet.update_cell(cell_row, config.price_update_column, stock_price)
+        cur_price_cells[i].value = stock_price
+        #worksheet.update_cell(cell_row, config.price_update_column, stock_price)
+
+    worksheet.update_cells(cur_price_cells)
 
     # Update cells in the Change with the daily change in price info from the ticker
     # in the Company column
     for cell_row in range(2, 11):
-        change = daily_returns[worksheet.cell(cell_row, config.ticker_column).value]
+        change = daily_returns[worksheet.cell(
+            cell_row, config.ticker_column).value]
         worksheet.update_cell(cell_row, config.net_change_update_column, change)
 
     # Update the cell next to "Last updated: to the current timestamp
@@ -287,6 +250,8 @@ def update_portfolio_value(ss):
     cur_time = datetime.fromtimestamp(
         time.time()).strftime('%Y-%m-%d %H:%M:%S')
     worksheet.update_cell(cell.row, cell.col + 1, cur_time)
+
+    worksheet.update_cells(cells)
 
 # ticker_column = 3 if not args.ticker_column else args.ticker_column
 # price_update_column = 6 if not args.update_column else args.update_column

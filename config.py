@@ -37,3 +37,6 @@ custom_value_name = ""
 
 # The cell that holds the value of a custom value to be reported
 custom_value = ""
+
+# The range of cells for tickers (alphanumeric)
+ticker_range = ""

@@ -4,3 +4,6 @@ credentials.json
 # Ignore unnecessary files
 .idea/
 __pycache__/
+
+# Ignore remote-sync settings from Atom Remote Sync Package
+.remote-sync.json
