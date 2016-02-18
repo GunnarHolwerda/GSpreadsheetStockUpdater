@@ -54,9 +54,15 @@ def get_biggest_movers(ws, ticker_col, change_col):
         changes_dict[ticker] = changes[pos]
         pos += 1
 
+    sorted_changes_dict = ((k, changes_dict[k]) for k in sorted(
+        changes_dict, key=changes_dict.get, reverse=True))
+
     ret_str = "Performance by Stock\n"
-    for ticker, change in changes_dict.items():
+    for ticker, change in sorted_changes_dict:
         ret_str += "{}: {}\n".format(ticker, change.rjust(6))
+
+    print(ret_str)
+    exit()
 
     return ret_str
 
@@ -73,7 +79,7 @@ def email_end_of_day_report(to_address, from_address, prev_total, cur_total, cus
            "Daily Stock Report\n\n"
            "Yesterday's ending value: {}\n"
            "Todays's ending value: {}\n\n"
-           "Overall increase/decrease: {}%\n"
+           "Overall increase/decrease: {.2f}%\n"
            "{}: {}\n\n"
            "{}"
            "Have a great day!").format(day_of_week,
@@ -103,6 +109,7 @@ def get_ticker_cells(worksheet):
     """
     tickers = worksheet.range(config.ticker_range)
     return tickers
+
 
 def get_ticker_symbols(ticker_cells):
     symbols = []
@@ -152,7 +159,8 @@ def get_price_data(query_url, ticker_symbols):
     pprint(price_info)
 
     for index in range(0, len(price_info)):
-        price_dict[ticker_symbols[index]] = price_info[index]['LastTradePriceOnly']
+        price_dict[ticker_symbols[index]] = price_info[
+            index]['LastTradePriceOnly']
         daily_return_dict[ticker_symbols[index]] = price_info[index]['Change']
 
     return price_dict, daily_return_dict
@@ -243,7 +251,8 @@ def update_portfolio_value(ss):
     for cell_row in range(2, 11):
         change = daily_returns[worksheet.cell(
             cell_row, config.ticker_column).value]
-        worksheet.update_cell(cell_row, config.net_change_update_column, change)
+        worksheet.update_cell(
+            cell_row, config.net_change_update_column, change)
 
     # Update the cell next to "Last updated: to the current timestamp
     cell = worksheet.find("Last updated:")

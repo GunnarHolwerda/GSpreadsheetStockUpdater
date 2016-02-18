@@ -15,19 +15,19 @@ to_addr = ""
 from_addr = ""
 
 # The column that holds the actual price of each stock
-price_update_column =
+price_update_column = 0
 
 # The column that that holds the point increase/decrease for the stock
-net_change_update_column =
+net_change_update_column = 0
 
 # The column holding all of the tickers in the portfolio
-ticker_column =
+ticker_column = 0
 
 # The column which the end of day value will be saved to
-save_column =
+save_column = 0
 
 # The column where the date will be put in when saving the value
-date_column =
+date_column = 0
 
 # The cell that holds the value of the portfolio
 copy_cell = ""
